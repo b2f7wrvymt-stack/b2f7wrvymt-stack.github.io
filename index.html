@@ -180,6 +180,36 @@ body{
 .ubar .b{height:9px;background:#F4EAE1;border-radius:99px;overflow:hidden}
 .ubar .b i{display:block;height:100%;background:linear-gradient(90deg,#8FD5B4,var(--green));border-radius:99px}
 .empty{text-align:center;color:#B0A69B;padding:34px 10px;font-size:15px}
+
+/* ---------- 学习记录 ---------- */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.grid3 .mini{font-size:15px;padding:16px 8px;gap:5px}
+@media(max-width:390px){
+  .grid3 .mini{font-size:13px;padding:14px 6px}
+  .grid3 .mini b{font-size:12px;padding:1px 6px}
+}
+.lfbar{display:flex;gap:8px;margin:-4px 2px 14px;flex-wrap:wrap}
+.lf{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;
+  font-family:inherit;font-size:14px;color:var(--muted);cursor:pointer}
+.lf.on{background:var(--main);border-color:var(--main);color:#fff;font-weight:700}
+.lsum{display:flex;text-align:center;padding:6px 0 2px}
+.lsum>div{flex:1;display:flex;flex-direction:column;gap:2px}
+.lsum b{font-size:23px;letter-spacing:-.5px}
+.lsum span{font-size:12px;color:var(--muted)}
+.lsum>div+div{border-left:1px solid var(--line)}
+.lday{font-size:14px;font-weight:700;color:var(--muted);margin:18px 4px 8px}
+.lcard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:10px}
+.lcard .lr1{display:flex;align-items:baseline;gap:10px}
+.lcard .ltime{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lcard .lmode{font-size:12px;font-weight:700;color:var(--main2);background:var(--soft);border-radius:99px;padding:2px 9px}
+.lcard .lscore{margin-left:auto;font-size:26px;font-weight:800;letter-spacing:-1px}
+.lcard .lscore small{font-size:14px;color:var(--muted);font-weight:600}
+.lcard .lr2{font-size:14px;color:var(--muted);margin-top:5px}
+.lwrong{margin-top:10px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.lwrong .lb{font-size:12px;color:var(--muted)}
+.wchip{border:1px solid #F3D9CE;background:#FFF7F3;color:#B4532F;border-radius:99px;
+  padding:4px 10px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.wchip:active{background:#FFEBE2}
 </style>
 </head>
 <body>
@@ -210,9 +240,10 @@ body{
     <button class="btn" id="startBtn">开始今天的练习</button>
     <button class="btn ghost" id="examBtn">小测验 · 20 题 / 10 分钟</button>
 
-    <div class="grid2">
+    <div class="grid3">
       <button class="mini" id="wrongBtn">错词本 <b id="wrongNum">0</b></button>
       <button class="mini" id="reportBtn">学习报告</button>
+      <button class="mini" id="logBtn">学习记录</button>
     </div>
 
     <div class="card stat">
@@ -311,6 +342,40 @@ body{
       </div>
     </div>
     <button class="btn ghost" id="pHome">回到首页</button>
+  </div>
+</section>
+
+<!-- ============ 学习记录 ============ -->
+<section id="log" class="screen hidden">
+  <div class="wrap">
+    <div class="qtop">
+      <button class="icon" id="lBack">返回</button>
+      <div class="qcount" style="margin-left:auto" id="lCount"></div>
+    </div>
+    <div class="h2">学习记录</div>
+    <p class="sub" style="margin:-8px 2px 14px;color:var(--muted);font-size:14px">每完成一组自动记一条，可以回看当时的分数和错词。数据只保存在这台设备。</p>
+
+    <div class="lfbar" id="lFilters">
+      <button class="lf on" data-f="all">全部</button>
+      <button class="lf" data-f="practice">每日练习</button>
+      <button class="lf" data-f="exam">小测验</button>
+      <button class="lf" data-f="wrong">错词专练</button>
+    </div>
+
+    <div class="card">
+      <div style="font-size:14px;color:var(--muted);margin-bottom:2px">当前筛选 · 累计</div>
+      <div class="lsum">
+        <div><b id="lGroups">0</b><span>练习组数</span></div>
+        <div><b id="lQs">0</b><span>答题数</span></div>
+        <div><b id="lAcc">—</b><span>正确率</span></div>
+      </div>
+    </div>
+
+    <div id="lList"></div>
+    <div class="empty" id="lEmpty" style="display:none">还没有练习记录。<br>回首页完成一组，这里就会自动记下来。</div>
+
+    <button class="btn ghost" id="lClear" style="margin-top:14px">清空学习记录</button>
+    <button class="btn ghost" id="lHome">回到首页</button>
   </div>
 </section>
 
@@ -471,19 +536,24 @@ const KEY = "en5a_2024_v1";
 const DAYS = [0, 1, 2, 4, 7, 15, 30];
 
 function blank(){
-  return {box:{}, days:{}, units:[1,2,3,4,5,6], total:0, right:0};
+  return {box:{}, days:{}, units:[1,2,3,4,5,6], total:0, right:0, logs:[]};
 }
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
     if(raw){
       const s = JSON.parse(raw);
-      if(s && s.box) return Object.assign(blank(), s);
+      if(s && s.box){
+        const st = Object.assign(blank(), s);
+        if(!Array.isArray(st.logs)) st.logs = [];
+        return st;
+      }
     }
   }catch(e){}
   return blank();
 }
 let state = load();
+if(!Array.isArray(state.logs)) state.logs = [];
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
 
 /* ============================================================
@@ -671,7 +741,7 @@ let S = {
 };
 
 function show(id){
-  ["home","quiz","result","wrong","report","units"].forEach(x => {
+  ["home","quiz","result","wrong","report","log","units"].forEach(x => {
     $(x).classList.toggle("hidden", x !== id);
   });
   window.scrollTo(0,0);
@@ -978,7 +1048,86 @@ function finish(){
   $("rEmpty").style.display = bad.length ? "none" : "block";
 
   show("result");
+  addLog(right, total, secs);
   save();
+}
+
+/* ---------- 学习记录 ---------- */
+const MODENAME = {practice:"每日练习", exam:"小测验", wrong:"错词专练"};
+let logFilter = "all";
+
+function addLog(right, total, secs){
+  if(!Array.isArray(state.logs)) state.logs = [];
+  state.logs.unshift({
+    at: Date.now(),
+    mode: S.mode,
+    total: total,
+    right: right,
+    secs: secs,
+    score: Math.round(right/total*100),
+    wrong: S.results.filter(r => !r.ok).map(r => r.w.w)
+  });
+  if(state.logs.length > 200) state.logs.length = 200;
+  save();
+}
+
+function fmtDay(k){
+  const p = k.split("-");
+  const d = new Date(+p[0], +p[1]-1, +p[2]);
+  const wk = ["周日","周一","周二","周三","周四","周五","周六"][d.getDay()];
+  return (+p[1]) + "月" + (+p[2]) + "日 " + wk;
+}
+function fmtClock(ts){
+  const d = new Date(ts);
+  return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function renderLog(){
+  const all = Array.isArray(state.logs) ? state.logs : [];
+  const logs = all.filter(r => logFilter === "all" || r.mode === logFilter);
+  const tq = logs.reduce((a,r) => a + (r.total||0), 0);
+  const tr = logs.reduce((a,r) => a + (r.right||0), 0);
+  $("lCount").textContent  = "共 " + logs.length + " 组";
+  $("lGroups").textContent = logs.length;
+  $("lQs").textContent     = tq;
+  $("lAcc").textContent    = tq ? Math.round(tr/tq*100) + "%" : "—";
+
+  $("lEmpty").style.display = logs.length ? "none" : "block";
+  $("lClear").style.display = all.length  ? "block" : "none";
+
+  const groups = {};
+  logs.forEach(r => {
+    const k = dkey(new Date(r.at));
+    (groups[k] = groups[k] || []).push(r);
+  });
+  const box = $("lList");
+  box.innerHTML = Object.keys(groups).sort().reverse().map(k => {
+    const items = groups[k].map(r => {
+      const sc  = r.score || 0;
+      const col = sc >= 90 ? "var(--green)" : (sc >= 60 ? "var(--main2)" : "var(--red)");
+      const chips = (r.wrong||[]).length
+        ? '<div class="lwrong"><span class="lb">错词</span>' +
+          r.wrong.map(w => '<button class="wchip" data-w="' + esc(w) + '">' + esc(w) + '</button>').join("") +
+          '</div>'
+        : '<div class="lwrong"><span class="lb">全对，没有错词</span></div>';
+      return '<div class="lcard">' +
+        '<div class="lr1">' +
+          '<span class="ltime">' + fmtClock(r.at) + '</span>' +
+          '<span class="lmode">' + (MODENAME[r.mode] || "练习") + '</span>' +
+          '<span class="lscore" style="color:' + col + '">' + sc + '<small>分</small></span>' +
+        '</div>' +
+        '<div class="lr2">' + r.right + "/" + r.total + " 题答对 · 用时 " + fmtTime(r.secs) + '</div>' +
+        chips + '</div>';
+    }).join("");
+    return '<div class="lday">' + fmtDay(k) + '</div>' + items;
+  }).join("");
+
+  Array.prototype.forEach.call(box.querySelectorAll(".wchip"), b => {
+    b.onclick = () => speak(b.getAttribute("data-w"));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#lFilters .lf"), b => {
+    b.classList.toggle("on", b.getAttribute("data-f") === logFilter);
+  });
 }
 
 /* ---------- 错词本 ---------- */
@@ -1082,6 +1231,22 @@ $("wPractice").onclick = () => startQuiz("wrong");
 $("reportBtn").onclick = () => { renderReport(); show("report"); };
 $("pBack").onclick = () => { renderHome(); show("home"); };
 $("pHome").onclick = () => { renderHome(); show("home"); };
+
+$("logBtn").onclick = () => { renderLog(); show("log"); };
+$("lBack").onclick = () => { renderHome(); show("home"); };
+$("lHome").onclick = () => { renderHome(); show("home"); };
+$("lFilters").onclick = e => {
+  const b = e.target.closest(".lf");
+  if(!b) return;
+  logFilter = b.getAttribute("data-f");
+  renderLog();
+};
+$("lClear").onclick = () => {
+  if(!confirm("确定清空全部学习记录吗？\n错词本、掌握进度和统计不会受影响。")) return;
+  state.logs = [];
+  save();
+  renderLog();
+};
 
 $("unitsBtn").onclick = () => { renderUnits(); show("units"); };
 $("uBack").onclick = () => { renderHome(); show("home"); };

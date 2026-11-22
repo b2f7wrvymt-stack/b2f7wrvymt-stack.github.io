@@ -1,5 +1,5 @@
 /* 五年级单词闯关 · 离线缓存 */
-const CACHE = 'en5a-words-v1';
+const CACHE = 'en5a-words-v2';
 const ASSETS = ['./','./index.html','./manifest.webmanifest',
                 './icon-180.png','./icon-192.png','./icon-512.png'];
 
