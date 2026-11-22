@@ -11,7 +11,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(ks => Promise.all(ks.filter(k => k.indexOf('en5a-') === 0 && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -19,6 +19,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
+  // /learn/ 下的资源由 learn/sw.js 独立管理，根缓存不介入
+  if (new URL(req.url).pathname.indexOf('/learn/') === 0) return;
   e.respondWith(
     caches.match(req).then(cached => {
       const network = fetch(req).then(res => {
